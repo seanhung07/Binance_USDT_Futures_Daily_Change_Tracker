@@ -388,11 +388,11 @@
                                 }
                                 
                                 if (progressText) {
-                                    progressText.textContent = `處理中: ${processedCount}/${totalCount} (${progressPercent}%)`;
+                                    progressText.textContent = `fetching: ${processedCount}/${totalCount} (${progressPercent}%)`;
                                 }
                             }
                         } catch (err) {
-                            console.error(`處理${symbol}時出錯:`, err);
+                            console.error(`${symbol} error:`, err);
                         }
                     }
                     
