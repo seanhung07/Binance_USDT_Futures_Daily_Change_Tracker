@@ -1,0 +1,538 @@
+
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Binance USDT Futures Daily Change Tracker</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+        }
+        
+        body {
+            background-color: #f5f5f5;
+            padding: 20px;
+            color: #333;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+        }
+        
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #eaeaea;
+        }
+        
+        h1 {
+            font-size: 24px;
+            font-weight: 600;
+        }
+        
+        .refresh-btn {
+            background-color: #2563eb;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 8px 16px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            font-size: 14px;
+            font-weight: 500;
+            transition: background-color 0.2s;
+        }
+        
+        .refresh-btn:hover {
+            background-color: #1d4ed8;
+        }
+        
+        .refresh-btn:disabled {
+            background-color: #93c5fd;
+            cursor: not-allowed;
+        }
+        
+        .refresh-icon {
+            margin-right: 8px;
+            width: 16px;
+            height: 16px;
+        }
+        
+        .search-box {
+            display: flex;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+        
+        .search-input {
+            padding: 8px 12px;
+            border: 1px solid #e5e7eb;
+            border-radius: 4px;
+            width: 100%;
+            max-width: 300px;
+        }
+        
+        .table-container {
+            overflow-x: auto;
+            margin-bottom: 20px;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+            font-size: 14px;
+        }
+        
+        thead {
+            background-color: #f3f4f6;
+        }
+        
+        th, td {
+            padding: 12px 16px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        
+        th {
+            font-weight: 600;
+            cursor: pointer;
+            user-select: none;
+            position: relative;
+        }
+        
+        th:hover {
+            background-color: #e5e7eb;
+        }
+        
+        tr:nth-child(even) {
+            background-color: #f9fafb;
+        }
+        
+        .positive {
+            color: #10b981;
+        }
+        
+        .negative {
+            color: #ef4444;
+        }
+        
+        .neutral {
+            color: #9ca3af;
+        }
+        
+        .sort-icon {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            margin-left: 4px;
+            vertical-align: middle;
+        }
+        
+        .loader-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 200px;
+        }
+        
+        .progress-container {
+            width: 100%;
+            max-width: 400px;
+            background-color: #f3f3f3;
+            border-radius: 4px;
+            margin: 12px 0;
+            overflow: hidden;
+        }
+        
+        .progress-bar {
+            height: 10px;
+            background-color: #2563eb;
+            width: 0%;
+            transition: width 0.3s ease;
+            border-radius: 4px;
+        }
+        
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin-bottom: 16px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .error-message {
+            background-color: #fee2e2;
+            border: 1px solid #f87171;
+            color: #b91c1c;
+            padding: 12px;
+            border-radius: 4px;
+            margin-bottom: 16px;
+        }
+        
+        .note {
+            margin-top: 16px;
+            font-size: 13px;
+            color: #6b7280;
+            line-height: 1.5;
+        }
+        
+        @media (max-width: 768px) {
+            .header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            
+            .refresh-btn {
+                margin-top: 12px;
+            }
+            
+            th, td {
+                padding: 8px 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Binance USDT Futures Daily Change</h1>
+            <button id="refreshBtn" class="refresh-btn">
+                <svg class="refresh-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 2v6h-6"></path>
+                    <path d="M3 12a9 9 0 0 1 15-6.7L21 8"></path>
+                    <path d="M3 22v-6h6"></path>
+                    <path d="M21 12a9 9 0 0 1-15 6.7L3 16"></path>
+                </svg>
+                Refresh
+            </button>
+        </div>
+        
+        <div id="errorContainer" class="error-message" style="display: none;"></div>
+        
+        <div id="loaderContainer" class="loader-container">
+            <div class="loader"></div>
+            <p>Fetching data for all Binance USDT Futures pairs...</p>
+            <div class="progress-container">
+                <div id="progressBar" class="progress-bar"></div>
+            </div>
+            <p id="progressText" style="font-size: 13px; color: #6b7280; margin-top: 8px;">Preparing data...</p>
+        </div>
+        
+        <div id="tableContainer" class="table-container" style="display: none;">
+            <div id="searchBoxContainer" class="search-box">
+                <input type="text" id="searchInput" class="search-input" placeholder="Search pairs...">
+            </div>
+            
+            <table id="dataTable">
+                <thead>
+                    <tr id="headerRow">
+                        <th data-field="symbol">Pair</th>
+                        <!-- Date headers will be added dynamically -->
+                    </tr>
+                </thead>
+                <tbody id="tableBody">
+                    <!-- Data rows will be added dynamically -->
+                </tbody>
+            </table>
+        </div>
+        
+        <div class="note">
+            <p>Note: This table shows the daily percentage change (open to close) for all Binance USDT futures pairs.</p>
+            <p>Tip: Use the search box above to filter specific trading pairs (e.g., "BTC" or "ETH").</p>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            let globalData = [];
+            let dates = [];
+            let sortField = 'symbol';
+            let sortDirection = 'asc';
+            let isLoading = false;
+
+            const refreshBtn = document.getElementById('refreshBtn');
+            const loaderContainer = document.getElementById('loaderContainer');
+            const tableContainer = document.getElementById('tableContainer');
+            const headerRow = document.getElementById('headerRow');
+            const tableBody = document.getElementById('tableBody');
+            const errorContainer = document.getElementById('errorContainer');
+            const searchInput = document.getElementById('searchInput');
+            const progressBar = document.getElementById('progressBar');
+            const progressText = document.getElementById('progressText');
+
+            refreshBtn.addEventListener('click', fetchData);
+            searchInput.addEventListener('input', function() {
+                const searchTerm = this.value.toUpperCase();
+                filterData(searchTerm);
+            });
+
+            function setLoading(loading) {
+                isLoading = loading;
+                
+                if (loading) {
+                    refreshBtn.disabled = true;
+                    refreshBtn.innerHTML = `
+                        <div class="loader" style="width: 16px; height: 16px; margin-right: 8px;"></div>
+                        加載中...
+                    `;
+                    loaderContainer.style.display = 'flex';
+                    tableContainer.style.display = 'none';
+                    errorContainer.style.display = 'none';
+                    
+                    if (progressBar) {
+                        progressBar.style.width = '0%';
+                    }
+                    if (progressText) {
+                        progressText.textContent = 'Loading...';
+                    }
+                } else {
+                    refreshBtn.disabled = false;
+                    refreshBtn.innerHTML = `
+                        <svg class="refresh-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 2v6h-6"></path>
+                            <path d="M3 12a9 9 0 0 1 15-6.7L21 8"></path>
+                            <path d="M3 22v-6h6"></path>
+                            <path d="M21 12a9 9 0 0 1-15 6.7L3 16"></path>
+                        </svg>
+                        重新整理
+                    `;
+                    
+                    if (globalData.length > 0) {
+                        loaderContainer.style.display = 'none';
+                        tableContainer.style.display = 'block';
+                    }
+                }
+            }
+
+            function showError(message) {
+                errorContainer.textContent = message;
+                errorContainer.style.display = 'block';
+                loaderContainer.style.display = 'none';
+            }
+
+            async function fetchData() {
+                setLoading(true);
+                
+                try {
+                    // 首先獲取所有交易對
+                    const BASE_URL = "https://fapi.binance.com";
+                    const TICKER_ENDPOINT = "/fapi/v1/ticker/24hr";
+                    const KLINE_ENDPOINT = "/fapi/v1/klines";
+                    
+                    const tickersResponse = await fetch(BASE_URL + TICKER_ENDPOINT);
+                    const tickersData = await tickersResponse.json();
+                    
+                    const usdtSymbols = tickersData
+                        .filter(t => t.symbol.endsWith('USDT') && !t.symbol.includes('UP') && !t.symbol.includes('DOWN'))
+                        .map(t => t.symbol);
+                    
+                    console.log(`found ${usdtSymbols.length} pairs`);
+                    
+                    let processedCount = 0;
+                    const totalCount = usdtSymbols.length;
+
+                    const records = [];
+                    const uniqueDates = new Set();
+                    
+                    for (const symbol of usdtSymbols) {
+                        try {
+                            const response = await fetch(`${BASE_URL}${KLINE_ENDPOINT}?symbol=${symbol}&interval=1d&limit=10`);
+                            const klineData = await response.json();
+                            
+                            for (const d of klineData) {
+                                const timestamp = d[0];
+                                const dateObj = new Date(timestamp);
+                                const dateStr = dateObj.toISOString().split('T')[0];
+                                uniqueDates.add(dateStr);
+                                
+                                const openPrice = parseFloat(d[1]);
+                                const closePrice = parseFloat(d[4]);
+                                const pctChange = ((closePrice - openPrice) / openPrice) * 100;
+                                
+                                records.push({
+                                    symbol,
+                                    date: dateStr,
+                                    pctChange: pctChange.toFixed(2)
+                                });
+                            }
+                            
+                            await new Promise(resolve => setTimeout(resolve, 50));
+                            
+                            processedCount++;
+                            if (processedCount % 5 === 0 || processedCount === totalCount) {
+                                const progressPercent = Math.round((processedCount / totalCount) * 100);
+                                
+                                if (progressBar) {
+                                    progressBar.style.width = `${progressPercent}%`;
+                                }
+                                
+                                if (progressText) {
+                                    progressText.textContent = `處理中: ${processedCount}/${totalCount} (${progressPercent}%)`;
+                                }
+                            }
+                        } catch (err) {
+                            console.error(`處理${symbol}時出錯:`, err);
+                        }
+                    }
+                    
+                    dates = [...uniqueDates].sort();
+                    
+                    const symbolMap = {};
+                    
+                    records.forEach(record => {
+                        if (!symbolMap[record.symbol]) {
+                            symbolMap[record.symbol] = { symbol: record.symbol };
+                        }
+                        symbolMap[record.symbol][record.date] = parseFloat(record.pctChange);
+                    });
+                    
+                    globalData = Object.values(symbolMap);
+                    
+                    updateTable();
+                } catch (err) {
+                    showError('Failed to get data from Binance. Please try again later.');
+                    console.error('Failed to get data from Binance. Please try again later.', err);
+                } finally {
+                    setLoading(false);
+                }
+            }
+
+            function filterData(searchTerm) {
+                if (!searchTerm) {
+                    displayData(sortData());
+                    return;
+                }
+                
+                const filteredData = globalData.filter(row => 
+                    row.symbol.toUpperCase().includes(searchTerm)
+                );
+                
+                displayData(filteredData);
+            }
+
+            function updateTable() {
+                // 清空現有表頭和數據
+                while (headerRow.children.length > 1) {
+                    headerRow.removeChild(headerRow.lastChild);
+                }
+                
+                tableBody.innerHTML = '';
+                
+                dates.forEach(date => {
+                    const th = document.createElement('th');
+                    th.textContent = date;
+                    th.dataset.field = date;
+                    th.addEventListener('click', () => handleSort(date));
+                    headerRow.appendChild(th);
+                });
+                
+                updateSortIndicator();
+
+                const sortedData = sortData();
+                displayData(sortedData);
+            }
+
+            function sortData() {
+                return [...globalData].sort((a, b) => {
+                    const aValue = a[sortField] === undefined ? -Infinity : a[sortField];
+                    const bValue = b[sortField] === undefined ? -Infinity : b[sortField];
+                    
+                    if (sortDirection === 'asc') {
+                        return aValue > bValue ? 1 : -1;
+                    } else {
+                        return aValue < bValue ? 1 : -1;
+                    }
+                });
+            }
+
+            function displayData(data) {
+                tableBody.innerHTML = '';
+                
+                data.forEach((row, index) => {
+                    const tr = document.createElement('tr');
+                    
+                    const symbolCell = document.createElement('td');
+                    symbolCell.textContent = row.symbol;
+                    symbolCell.style.fontWeight = '500';
+                    tr.appendChild(symbolCell);
+                    
+                    dates.forEach(date => {
+                        const td = document.createElement('td');
+                        
+                        if (row[date] !== undefined) {
+                            td.textContent = `${row[date]}%`;
+                            
+                            if (row[date] > 0) {
+                                td.className = 'positive';
+                            } else if (row[date] < 0) {
+                                td.className = 'negative';
+                            } else {
+                                td.className = 'neutral';
+                            }
+                        } else {
+                            td.textContent = '-';
+                            td.className = 'neutral';
+                        }
+                        
+                        tr.appendChild(td);
+                    });
+                    
+                    tableBody.appendChild(tr);
+                });
+            }
+
+            function handleSort(field) {
+                if (sortField === field) {
+                    sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+                } else {
+                    sortField = field;
+                    sortDirection = 'asc';
+                }
+                
+                updateSortIndicator();
+                const sortedData = sortData();
+                displayData(sortedData);
+            }
+
+            function updateSortIndicator() {
+                document.querySelectorAll('.sort-icon').forEach(icon => icon.remove());
+                
+                const currentSortHeader = document.querySelector(`th[data-field="${sortField}"]`);
+                
+                if (currentSortHeader) {
+                    const sortIcon = document.createElement('span');
+                    sortIcon.className = 'sort-icon';
+                    sortIcon.innerHTML = sortDirection === 'asc' 
+                        ? '&#9650;'
+                        : '&#9660;';
+                    
+                    currentSortHeader.appendChild(sortIcon);
+                }
+            }
+            
+            fetchData();
+        });
+    </script>
+</body>
+</html>
